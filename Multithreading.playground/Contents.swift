@@ -116,5 +116,158 @@ class QosThreadTest {
     }
     
 }
-
 QosThreadTest.shared.test()
+
+
+
+/// Synchronization
+/*
+ 1 потом может одновременно захватить mutex
+ */
+
+// pthread_mutex
+
+class TestMutex {
+    
+    private var mutex = pthread_mutex_t()
+    
+    init() {
+        pthread_mutex_init(&mutex, nil)
+    }
+    
+    func test() {
+        pthread_mutex_lock(&mutex)
+        //Do something
+        pthread_mutex_unlock(&mutex)
+    }
+    
+}
+
+// NSLock
+
+public class NSLockTest {
+    
+    private let lock = NSLock()
+    
+    func test(i: Int) {
+        lock.lock()
+        // Do something
+        lock.unlock()
+    }
+    
+}
+
+
+
+// Recursive lock
+/*
+ Разрешить потоку захватывать один и тот же ресурс несколько раз
+ */
+
+class RecursiveMutexTest {
+    
+    private var mutex = pthread_mutex_t()
+    private var attr = pthread_mutexattr_t()
+    
+    init() {
+        pthread_mutexattr_init(&attr)
+        pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE)
+        pthread_mutex_init(&mutex, &attr)
+    }
+    
+    func test1() {
+        pthread_mutex_lock(&mutex)
+        test2()
+        pthread_mutex_unlock(&mutex)
+    }
+    
+    func test2() {
+        pthread_mutex_lock(&mutex)
+        pthread_mutex_unlock(&mutex)
+    }
+    
+}
+
+class RecursiveLockTest {
+    
+    private let lock = NSRecursiveLock()
+    
+    func test1(){
+        lock.lock()
+        test2()
+        lock.unlock()
+    }
+    
+    func test2(){
+        lock.lock()
+        // Do something
+        lock.unlock()
+    }
+    
+}
+
+
+
+/// Condition
+
+class MutexConditionTest {
+    private var condition = pthread_cond_t()
+    private var mutex = pthread_mutex_t()
+    private var check = false
+    
+    init(){
+        pthread_cond_init(&condition, nil)
+        pthread_mutex_init(&mutex, nil)
+    }
+    
+    func test1(){
+        print("MutexConditionTest - start")
+        pthread_mutex_lock(&mutex)
+        print("MutexConditionTest - lock")
+        while !check {
+            print("MutexConditionTest - !check - cycle loop")
+            pthread_cond_wait(&condition, &mutex)
+        }
+        print("MutexConditionTest - DO SOME WORK")
+        pthread_mutex_unlock(&mutex)
+        print("MutexConditionTest - unlock")
+    }
+    
+    func test2(){
+        print("MutexConditionTest - test2() - start")
+        pthread_mutex_lock(&mutex)
+        check = true
+        pthread_cond_signal(&condition)
+        print("MutexConditionTest - test2() - unlocking mutex")
+        pthread_mutex_unlock(&mutex)
+        print("MutexConditionTest - test2() - end")
+    }
+    
+}
+
+// NSCondition
+
+class ConditionTest {
+    
+    private let condition = NSCondition()
+    private var check: Bool = false
+    
+    func test1() {
+        
+        condition.lock()
+        while(!check) {
+            condition.wait()
+        }
+        condition.unlock()
+    }
+
+    func test2() {
+        condition.lock()
+        
+        check = true
+        condition.signal()
+        condition.unlock()
+    }
+    
+}
+
